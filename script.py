@@ -1,8 +1,11 @@
-import requests, json, os, sys, pdb, traceback
+import requests, json, os, sys, pdb, traceback, time
 from bs4 import BeautifulSoup
 
-debug = True
 db_file = 'db.txt'
+
+def prog(txt):
+    print(txt, end='...')
+    sys.stdout.flush()
 
 def check_db(urls):
     if type(urls) != dict:
@@ -21,7 +24,7 @@ def add_to_db(urls):
             f.write(url + '\n')
 
 def send(txt):
-    if debug:
+    if config['debug']:
         print('-----------')
         print(txt)
         print('-----------')
@@ -33,6 +36,10 @@ def send(txt):
         'chat_id': chat_id,
         'text': txt,
     })
+
+def admin_action(txt):
+    send('ADMIN ACTION REQUIRED: %s' % txt)
+    pdb.set_trace()
 
 br = ' '
 replacements = [
@@ -96,7 +103,7 @@ def parse_upwork_json(url):
         }
     existing = check_db(jobs)
     if len(existing) == 1 and url in existing:
-        raise Exception('len(existing) == 1, url = %s' % url)
+        admin_action('len(existing) == 1, url = %s' % url)
     for job in sorted(jobs.values(), key=lambda x: x['time']):
         send_job(job)
     add_to_db(jobs)
@@ -104,9 +111,9 @@ def parse_upwork_json(url):
 
 def parse_upwork_rss(url, title):
     source = 'upwork_rss:%s' % title
-    print('Requesting %s: %s' % (source, url))
+    prog('Requesting %s' % (source,))
     txt = requests.get(url).text
-    print('Parsing', end='...')
+    prog('Parsing')
     bs = BeautifulSoup(txt, 'xml')
     jobs = {url: {
         'source': source,
@@ -127,15 +134,15 @@ def parse_upwork_rss(url, title):
             'url': item.link.text,
             'pos': len(items) - pos,
         }
-    print('Checking db', end='...')
+    prog('Checking db')
     existing = check_db(jobs)
     print('%s / %s new' % (len(jobs), len(jobs) + len(existing)), end='...')
     if len(existing) == 1 and url in existing:
-        raise Exception('len(existing) == 1, source = %s, url = %s' % (source, url))
-    print('Sending messages', end='...')
+        admin_action('len(existing) == 1, source = %s, url = %s' % (source, url))
+    prog('Sending messages')
     for job in sorted(jobs.values(), key=lambda x: x['pos']):
         send_job(job)
-    print('Adding to db', end='...')
+    prog('Adding to db')
     add_to_db(jobs)
     print('done')
     
@@ -149,7 +156,11 @@ if not os.path.exists(db_file):
 config = json.load(open('config.json'))
 
 try:
-    parse_upwork_rss('https://www.upwork.com/ab/feed/topics/rss?securityToken=e06672fe1d5ee21a0802f89bf7c6f6d6700118e7443e2868e8c51fbe5bea341830b01e4c590c544d58d17a7b55bd2eb02b2db9993ca229e6d68119eb30838d06&userUid=906554652207960064&orgUid=906554652216348673', 'feed')
+    while True:
+        for title, url in config['upwork_rss']:
+            parse_upwork_rss(url, title)
+        print('Sleep for %d minutes' % config['sleep_minutes'])
+        time.sleep(config['sleep_minutes'] * 60)
 except Exception as e:
     exc = traceback.format_exc()
     print(exc)
