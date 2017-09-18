@@ -43,7 +43,7 @@ def send(txt):
         'text': txt,
     })
     if resp.status_code != 200:
-        admin_action('TELEGRAM ERROR %s' % resp.txt)
+        admin_action('TELEGRAM ERROR %s' % resp.text)
 
 def admin_action(txt):
     send('ADMIN ACTION REQUIRED: %s' % txt)
