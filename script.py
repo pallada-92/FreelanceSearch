@@ -40,7 +40,7 @@ def send(txt):
     url = 'https://api.telegram.org/bot' + token + '/sendMessage'
     resp = requests.post(url, params={
         'chat_id': chat_id,
-        'text': txt,
+        'text': txt[:4000] + ('\n..........' if len(txt) > 4000 else ''),
     })
     if resp.status_code != 200:
         admin_action('TELEGRAM ERROR %s' % resp.text)
