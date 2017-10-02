@@ -129,6 +129,8 @@ def parse_upwork_rss(url, title):
     source = 'upwork_rss:%s' % title
     prog('Requesting %s' % (source,))
     txt = req_text(requests.get(url), source)
+    if txt is None:
+        return
     prog('Parsing')
     bs = BeautifulSoup(txt, 'xml')
     jobs = {url: {
@@ -203,6 +205,8 @@ def check_fl_ru(keywords):
             data=data,
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
         ), 'POST: fl.ru %s' % keyword)
+        if text is None:
+            return
         # token = get_fl_ru_token(text)
         # prog('token=%s' % token)
         # pdb.set_trace()
@@ -273,6 +277,8 @@ def check_website(task):
     url = task['url']
     prog('Requesting %s' % url)
     text = req_text(requests.get(url), url)
+    if text is None:
+        return
     txt = get_strings(text, select=task['select'])
     fname = get_website_file(url)
     if os.path.exists(fname):
@@ -331,7 +337,8 @@ try:
                 check_fl_ru(config['fl_ru_keywords'])
             last_fl_ru_req = cur_time
         if cur_time - last_message >= config['ping_period']:
-            send('OK')
+            prog('PING')
+            send('PING')
         print(end=',')
         sys.stdout.flush()
         time.sleep(60)
